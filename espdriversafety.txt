@@ -1,0 +1,115 @@
+
+int in1 = 8;
+int in2 = 9;
+int enA = 10;
+
+
+int led1 = 3;
+int led2 = 4;
+int buzzer = 5;
+
+
+int vibration = 6;
+int voltagePin = A0;
+
+
+char command;
+
+bool sleepMode = false;
+unsigned long sleepStartTime = 0;
+bool alertDone = false;
+
+void setup() {
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+  pinMode(enA, OUTPUT);
+
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
+  pinMode(buzzer, OUTPUT);
+
+  pinMode(vibration, INPUT);
+
+  Serial.begin(9600);
+
+  motorOn();
+}
+
+void loop() {
+
+  
+  int raw = analogRead(voltagePin);
+  float voltage = raw * (25.0 / 1023.0);
+
+  if (voltage < 10.0) {
+    digitalWrite(led2, HIGH);
+  } else {
+    digitalWrite(led2, LOW);
+  }
+
+  
+  if (Serial.available() > 0) {
+    command = Serial.read();
+
+    if (command == 'S') {
+      sleepMode = true;
+      sleepStartTime = millis();
+      alertDone = false;
+      motorOff();
+    }
+
+    if (command == 'R') {
+      sleepMode = false;
+      motorOn();
+      digitalWrite(buzzer, LOW);
+      digitalWrite(led1, LOW);
+    }
+  }
+
+  
+  if (sleepMode) {
+
+    unsigned long currentTime = millis();
+
+    
+    if (!alertDone && (currentTime - sleepStartTime <= 5000)) {
+      digitalWrite(buzzer, HIGH);
+      digitalWrite(led1, HIGH);
+    }
+
+    
+    if (!alertDone && (currentTime - sleepStartTime > 5000)) {
+      digitalWrite(buzzer, LOW);
+      digitalWrite(led1, LOW);
+      alertDone = true;
+    }
+
+    
+    if (currentTime - sleepStartTime >= 60000) {
+      sleepMode = false;
+      motorOn();
+    }
+  }
+
+  
+  if (!sleepMode) {
+    if (digitalRead(vibration) == HIGH) {
+      digitalWrite(buzzer, HIGH);
+    } else {
+      digitalWrite(buzzer, LOW);
+    }
+  }
+}
+
+
+void motorOn() {
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  analogWrite(enA, 200);
+}
+
+
+void motorOff() {
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, LOW);
+}
